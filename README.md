@@ -12,6 +12,9 @@ Ingest text files, Markdown, and PDFs into a local vector database, then search 
 - The system finds the relevant chunk, even though "robots" never appears in the text
 
 ## Architecture
+File on disk → Plain text → Chunks → Embeddings → Vector DB
+                                                       ↓
+                            User query → Query embedding → Top-K results
 
 ### Components
 
@@ -51,6 +54,7 @@ source venv/bin/activate   # On Windows: venv\Scripts\activate
 pip install chromadb sentence-transformers pymupdf langchain-text-splitters
 ```
 
+pip install -r requirements.txt
 ## Usage
 
 ### Ingest a document
@@ -117,7 +121,6 @@ Then restart Claude Desktop. The `docmind` tools should appear in the tools pane
 
 ## License
 
-MIT (or your choice)
 
 ## Author
 
