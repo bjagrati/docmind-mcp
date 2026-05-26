@@ -1,0 +1,34 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Our project's data and storage — keep these local
+storage/
+data/documents/*
+!data/documents/.gitkeep
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Environment variables (for later, when we have API keys)
+.env
+.env.local
