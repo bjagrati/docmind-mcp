@@ -7,8 +7,10 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 
 class DocumentStore:
-    def __init__(self, persist_dir: str = "../storage/chroma_db"):
-        # Connect to (or create) a ChromaDB stored on disk at persist_dir.
+    def __init__(self, persist_dir: str = None):
+        if persist_dir is None:
+            from pathlib import Path
+            persist_dir = str(Path(__file__).parent.parent.parent / "storage" / "chroma_db")
         self.client = chromadb.PersistentClient(path=persist_dir)
         
         # Tell ChromaDB which embedding model to use.
