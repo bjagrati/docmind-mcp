@@ -3,13 +3,13 @@ import sys
 from pathlib import Path
 
 # Same path trick as ingest_and_search.py: ensure we can import our sibling modules
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from mcp.server.fastmcp import FastMCP
 
-from loader import load_file
-from chunker import chunk_text
-from store import DocumentStore
+from core.loader import load_file
+from core.chunker import chunk_text
+from core.store import DocumentStore
 
 # Use absolute path for storage so it works regardless of where the server is launched from
 STORAGE_PATH = str(Path(__file__).parent.parent / "storage" / "chroma_db")

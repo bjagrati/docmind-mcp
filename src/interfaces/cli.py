@@ -4,11 +4,11 @@ import uuid
 from pathlib import Path
 
 # Make sibling imports work when run as a script
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from loader import load_file
-from chunker import chunk_text
-from store import DocumentStore
+from core.loader import load_file
+from core.chunker import chunk_text
+from core.store import DocumentStore
 
 
 def ingest(file_path: str, store: DocumentStore) -> str:
