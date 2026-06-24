@@ -12,7 +12,7 @@ from core.chunker import chunk_text
 from core.store import DocumentStore
 
 # Use absolute path for storage so it works regardless of where the server is launched from
-STORAGE_PATH = str(Path(__file__).parent.parent / "storage" / "chroma_db")
+STORAGE_PATH = str(Path(__file__).parent.parent.parent / "storage" / "chroma_db")
 
 # Create the MCP server with a name (this is how it'll show up in Claude Desktop)
 mcp = FastMCP("docmind")
