@@ -1,87 +1,129 @@
 # docmind-mcp
 
-A semantic document retrieval system designed to be exposed as an MCP (Model Context Protocol) server, so AI agents like Claude can search and reason over your personal documents.
+A semantic + keyword document retrieval system with three interfaces:
+
+- 🤖 **MCP server** — Claude (or any MCP-compatible AI) can search your documents as tools
+- 🌐 **Web app** — upload, browse, and search documents via a clean browser UI
+- 💻 **CLI** — power-user command line for scripting and automation
+
+All three interfaces share one engine: a hybrid retrieval pipeline combining vector embeddings (ChromaDB) and keyword search (SQLite FTS5), fused via Reciprocal Rank Fusion.
+
+Built as a learning project to explore RAG, MCP, and full-stack AI engineering from first principles.
+
+---
 
 ## What It Does
 
-Ingest text files, Markdown, and PDFs into a local vector database, then search them by *meaning* — not just keywords. Built as a learning project to explore RAG (Retrieval-Augmented Generation) and MCP from scratch.
+Upload text files, Markdown, or PDFs. Then search them three ways:
 
-**Example:**
-- A document mentions "reinforcement learning" and "AlphaGo"
-- You search for `"how do robots learn"`
-- The system finds the relevant chunk, even though "robots" never appears in the text
+- **Semantic** — find chunks by *meaning*. Search "how do robots learn" and find a passage about reinforcement learning, even if the word "robots" never appears.
+- **Keyword** — find chunks containing literal words. Backed by SQLite FTS5 with BM25 scoring and Porter stemming.
+- **Hybrid** — combine both methods using Reciprocal Rank Fusion (RRF) for the best results.
+
+---
 
 ## Architecture
-File on disk → Plain text → Chunks → Embeddings → Vector DB
-                                                       ↓
-                            User query → Query embedding → Top-K results
+
+The codebase follows a **hexagonal architecture**: a shared `core/` engine, plus multiple `interfaces/` that wrap it.
+
+\`\`\`
+┌──────────────────────────────────────────────────────────────────┐
+│                            USERS                                  │
+│   Web browser     AI agent (Claude)    Power user (terminal)     │
+└────────┬──────────────────┬──────────────────┬──────────────────┘
+         │ HTTP             │ stdio (MCP)      │ subprocess
+┌────────▼────────┐ ┌──────▼──────┐  ┌────────▼───────┐
+│   FastAPI       │ │   MCP        │  │   CLI          │
+│   web server    │ │   server     │  │                │
+└────────┬────────┘ └──────┬──────┘  └────────┬───────┘
+         └────────────────┬┴─────────────────┘
+                          │
+                  ┌───────▼────────┐
+                  │  DocumentService   │   ← orchestration layer
+                  └───────┬────────┘
+                          │
+            ┌─────────────┼─────────────┐
+            │             │             │
+   ┌────────▼────┐ ┌─────▼─────┐  ┌────▼─────────┐
+   │  ChromaDB   │ │  SQLite   │  │  loader.py,  │
+   │  (vectors)  │ │  (catalog │  │  chunker.py  │
+   │             │ │  + FTS5)  │  │              │
+   └─────────────┘ └───────────┘  └──────────────┘
+\`\`\`
 
 ### Components
 
-| File | Role |
-|------|------|
-| `src/loader.py` | Reads `.txt`, `.md`, and `.pdf` files into plain text |
-| `src/chunker.py` | Splits long text into overlapping chunks at natural boundaries |
-| `src/store.py` | Wraps ChromaDB; handles embedding, storage, and search |
-| `src/ingest_and_search.py` | Command-line tool tying everything together |
+| Path                                | Role                                                            |
+| ----------------------------------- | --------------------------------------------------------------- |
+| `src/core/loader.py`                | Reads .txt, .md, .pdf files into plain text                     |
+| `src/core/chunker.py`               | Recursive text splitting with overlap                           |
+| `src/core/store.py`                 | ChromaDB wrapper for vector storage and semantic search         |
+| `src/core/metadata_store.py`        | SQLite catalog + FTS5 keyword search with BM25 + Porter stemming |
+| `src/core/service.py`               | Orchestration layer with hybrid search via Reciprocal Rank Fusion |
+| `src/interfaces/cli.py`             | Command-line interface                                          |
+| `src/interfaces/mcp_server.py`      | MCP server (FastMCP) exposing tools to Claude                   |
+| `src/interfaces/web/api.py`         | FastAPI REST endpoints                                          |
+| `src/interfaces/web/static/`        | HTML/CSS/JS frontend                                            |
+
+---
 
 ## Tech Stack
 
 - **Python 3.12**
+- **FastAPI + Uvicorn** — REST API and ASGI server
 - **ChromaDB** — local vector database
+- **SQLite + FTS5** — relational catalog and keyword search (no external dependency)
 - **sentence-transformers** (`all-MiniLM-L6-v2`) — text embeddings, runs locally
 - **PyMuPDF** — PDF text extraction
 - **langchain-text-splitters** — smart recursive chunking
+- **MCP Python SDK (FastMCP)** — MCP server protocol
+- **Pydantic** — request/response validation
+- **Plain HTML/CSS/JS** — frontend (no framework)
+
+---
 
 ## Setup
 
 ### Prerequisites
+
 - Python 3.10+ (3.12 recommended)
 - macOS, Linux, or Windows
 
 ### Install
 
-```bash
-# Clone the repo
+\`\`\`bash
 git clone https://github.com/bjagrati/docmind-mcp.git
 cd docmind-mcp
 
-# Create a virtual environment
 python3.12 -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install chromadb sentence-transformers pymupdf langchain-text-splitters
-```
+source venv/bin/activate   # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
+\`\`\`
+
+---
+
 ## Usage
 
-### Ingest a document
+### Web app (recommended)
 
-```bash
-cd src
-python ingest_and_search.py ingest ../data/documents/your_file.pdf
-```
+\`\`\`bash
+uvicorn src.interfaces.web.api:app --reload --port 8000
+\`\`\`
 
-### Search
+Then open:
+- **http://localhost:8000/ui/** — the document upload + search UI
+- **http://localhost:8000/docs** — interactive API documentation (Swagger UI)
 
-```bash
-python ingest_and_search.py search "your natural language query"
-```
+### CLI
 
-## MCP Integration
+\`\`\`bash
+cd src/interfaces
+python cli.py ingest ../../data/documents/your_file.pdf
+python cli.py search "your natural-language query"
+\`\`\`
 
-This project exposes its retrieval engine as an MCP server, allowing Claude Desktop (or any MCP-compatible AI client) to use it as tools.
-
-### Available Tools
-
-- **`search_documents(query, top_k)`** — semantic search over the document library
-- **`list_documents()`** — summary of what's stored
-- **`get_document_chunks(doc_id)`** — fetch all chunks of a specific document, in order
-- **`ingest_document(file_path)`** — add a new document on the fly
-
-### Configuring Claude Desktop
+### MCP integration (Claude Desktop)
 
 Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
 
@@ -90,38 +132,76 @@ Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (m
   "mcpServers": {
     "docmind": {
       "command": "/absolute/path/to/venv/bin/python",
-      "args": ["/absolute/path/to/src/server.py"]
+      "args": ["/absolute/path/to/src/interfaces/mcp_server.py"]
     }
   }
 }
 \`\`\`
 
-Then restart Claude Desktop. The `docmind` tools should appear in the tools panel.
+Restart Claude Desktop. Four tools will be available:
+
+- `search_documents(query, top_k)` — semantic search
+- `list_documents()` — catalog summary
+- `get_document_chunks(doc_id)` — fetch full document
+- `ingest_document(file_path)` — add new files on the fly
+
+---
+
+## API Endpoints
+
+| Method   | Path                       | Purpose                              |
+| -------- | -------------------------- | ------------------------------------ |
+| `GET`    | `/`                        | API info                             |
+| `GET`    | `/stats`                   | Document and chunk counts            |
+| `GET`    | `/documents`               | List all documents                   |
+| `GET`    | `/documents/{doc_id}`      | Fetch one document's metadata        |
+| `POST`   | `/documents/upload`        | Upload and ingest a file             |
+| `DELETE` | `/documents/{doc_id}`      | Remove a document                    |
+| `POST`   | `/search/semantic`         | Vector-based search                  |
+| `POST`   | `/search/keyword`          | FTS5 keyword search with BM25        |
+| `POST`   | `/search/hybrid`           | Combined search via RRF (recommended) |
+
+See `/docs` once the server is running for the full interactive spec.
+
+---
 
 ## Project Status
 
-🚧 **In active development.** Current state:
+🎉 **v2 complete.** Current state:
 
 - [x] Document loader (txt, md, pdf)
-- [x] Smart text chunking with overlap
+- [x] Smart recursive text chunking with overlap
 - [x] Vector storage with ChromaDB
-- [x] Semantic search via CLI
-- [x] MCP server wrapper
-- [x] Claude Desktop integration verified
-- [ ] Hybrid search (vector + keyword)
+- [x] Semantic search
+- [x] MCP server + Claude Desktop integration
+- [x] CLI
+- [x] SQLite catalog with FTS5 keyword search
+- [x] Hybrid search via Reciprocal Rank Fusion
+- [x] FastAPI REST API
+- [x] Web frontend (HTML/CSS/JS)
+- [ ] Multi-user authentication
 - [ ] Reranking with cross-encoder
-- [ ] Multi-document filtering
+- [ ] Deployment (Railway/Render)
+- [ ] Evaluation harness
+
+---
 
 ## Roadmap
 
-1. Wrap the retrieval engine in an MCP server (FastMCP)
-2. Connect to Claude Desktop and test agentic search
-3. Add reranking for better retrieval quality
-4. Support metadata filters (date, file type, tags)
+1. Deploy to a public URL (Railway or Render)
+2. Add reranking via cross-encoder for retrieval quality
+3. Build a small evaluation harness with metrics (precision@k, MRR)
+4. Multi-user mode with simple username-based isolation
+5. More file types (.docx, .html)
+
+---
 
 ## License
 
+MIT
+
+---
 
 ## Author
 
-Built by Jagrati Bhardwaj as a learning project for understanding RAG and MCP from first principles.
+Built by Jagrati Bhardwaj as a learning project to explore RAG, MCP, and full-stack AI engineering from first principles.
