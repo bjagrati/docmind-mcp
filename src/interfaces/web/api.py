@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from core.service import DocumentService
@@ -55,6 +56,7 @@ def root():
         "name": "docmind",
         "version": "2.0.0",
         "docs": "/docs",
+        "ui": "/ui",
         "endpoints": ["/documents", "/search/semantic", "/search/keyword", "/search/hybrid"],
     }
 
@@ -149,3 +151,9 @@ def search_keyword(req: SearchRequest):
 def search_hybrid(req: SearchRequest):
     """Combined search using Reciprocal Rank Fusion (recommended)."""
     return {"results": service.hybrid_search(req.query, top_k=req.top_k)}
+
+# ─────────────────────────── Static UI ────────────────────────────
+# Serve the frontend at /ui to avoid colliding with API routes.
+# The UI's JavaScript will call the JSON endpoints above.
+_STATIC_DIR = Path(__file__).parent / "static"
+app.mount("/ui", StaticFiles(directory=str(_STATIC_DIR), html=True), name="ui")

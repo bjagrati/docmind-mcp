@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>docmind</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>📚 docmind</h1>
+        <p class="tagline">Search your documents by meaning and by keyword.</p>
+        <div id="stats" class="stats"></div>
+    </header>
+
+    <main>
+        <!-- Upload section -->
+        <section class="card">
+            <h2>Upload a document</h2>
+            <p class="hint">Supports .txt, .md, and .pdf files.</p>
+            <input type="file" id="file-input" accept=".txt,.md,.pdf">
+            <button id="upload-btn">Upload</button>
+            <div id="upload-status" class="status"></div>
+        </section>
+
+        <!-- Documents section -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Your documents</h2>
+                <button id="refresh-docs-btn" class="secondary">Refresh</button>
+            </div>
+            <div id="documents-list" class="documents-list">
+                <p class="empty">Loading…</p>
+            </div>
+        </section>
+
+        <!-- Search section -->
+        <section class="card">
+            <h2>Search</h2>
+            <div class="search-controls">
+                <input
+                    type="text"
+                    id="query-input"
+                    placeholder="e.g. how do robots learn"
+                    autocomplete="off"
+                >
+                <select id="mode-select">
+                    <option value="hybrid">Hybrid (recommended)</option>
+                    <option value="semantic">Semantic</option>
+                    <option value="keyword">Keyword</option>
+                </select>
+                <button id="search-btn">Search</button>
+            </div>
+            <div id="search-results" class="search-results"></div>
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            <a href="/docs" target="_blank">API docs</a> ·
+            <a href="https://github.com/bjagrati/docmind-mcp" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
